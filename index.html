@@ -1,1 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f6f7f9;
+      color: #111;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(axuto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .image {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background-color: #e5e7eb;
+    }
+
+    .content {
+      padding: 14px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #555;
+    }
+
+    .value {
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #111;
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-right: 6px;
+      margin-top: 4px;
+      color: #111;
+    }
+
+    .purple { background: #eadcff; }
+    .pink { background: #ffdce8; }
+    .green { background: #dff5e3; }
+    .gray { background: #eee; }
+
+    .empty {
+      text-align: center;
+      color: #888;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="grid" class="grid"></div>
+
+  <script>
+    function chipClass(val) {
+      if (!val) return "gray";
+      const v = String(val).toLowerCase();
+
+      if (v.includes("nrg")) return "purple";
+      if (v.includes("female")) return "pink";
+      if (v.includes("active")) return "green";
+
+      return "gray";
+    }
+
+    grist.ready({
+      requiredAccess: 'read table'
+    });
+
+    grist.onRecords((records) => {
+      const container = document.getElementById("grid");
+
+      if (!records || records.length === 0) {
+        container.innerHTML = "<div class='empty'>No data received</div>";
+        return;
+      }
+
+      container.innerHTML = "";
+
+      records.forEach(r => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        // 🔥 FINAL IMAGE FIX
+        let imageUrl = "";
+
+        if (r.CageCard && r.CageCard.length > 0) {
+          let attachmentId = null;
+
+          // Handle ["L", id] format
+          if (r.CageCard[0] === "L") {
+            attachmentId = r.CageCard[1];
+          }
+          // Handle [id] format
+          else if (typeof r.CageCard[0] === "number") {
+            attachmentId = r.CageCard[0];
+          }
+
+          if (attachmentId) {
+            try {
+              const gristOrigin = window.parent.location.origin;
+              imageUrl = `${gristOrigin}/attachments/${attachmentId}`;
+            } catch (e) {
+              console.warn("Could not access parent origin", e);
+            }
+          }
+        }
+
+        card.innerHTML = `
+          <img class="image" src="${imageUrl}" />
+
+          <div class="content">
+            <div class="label">CageID</div>
+            <div class="value">${r.CageID ?? ""}</div>
+
+            <div class="label">AliveMice</div>
+            <div class="value">${r.Mouse_Count ?? 0}</div>
+
+            <div>
+              <span class="chip ${chipClass(r.Mouse_Strain)}">
+                ${r.Mouse_Strain ?? ""}
+              </span>
+
+              <span class="chip ${chipClass(r.Mouse_Sex)}">
+                ${r.Mouse_Sex ?? ""}
+              </span>
+            </div>
+
+            <div style="margin-top:10px;">
+              <span class="chip ${chipClass(r.Status)}">
+                ${r.Status ?? ""}
+              </span>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    });
+  </script>
+</body>
+</html>
 
